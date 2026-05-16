@@ -177,8 +177,8 @@ if os.path.exists(DASH_SRV):
     )
     time.sleep(0.5)
     if not no_browser:
-        webbrowser.open("http://localhost:8888/dashboard/")  # system default browser
-    print(f"Dashboard: http://localhost:8888/dashboard/\n")
+        webbrowser.open("http://localhost:8888/dashboard/?poll_ms=2000&stale_s=300")  # CPU-safe thresholds
+    print(f"Dashboard: http://localhost:8888/dashboard/?poll_ms=2000&stale_s=300\n")
 
 open(LOG, "w").close()
 log_f = open(LOG, "a")
