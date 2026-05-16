@@ -109,13 +109,14 @@ MOE_DIR="$TIS/albert-moe-13"
 if [ -f "$MOE_TEST" ] && [ -f "$TRAIN_BIBLE" ]; then
     ok "moe-test and train_bible already built"
 else
-    printf "  compiling moe-test and train_bible...\n"
+    printf "  compiling moe-test and train_bible from workspace...\n"
+    # Both crates live in the albert-moe-13 workspace — build them together
     cargo build --release \
-        --manifest-path "$MOE_DIR/moe-llm-core/Cargo.toml" \
+        --manifest-path "$MOE_DIR/Cargo.toml" \
         --bin moe-test \
         --bin train_bible \
         --target-dir "$MOE_DIR/target" \
-        2>&1 | grep -E "^(error|   Compiling moe|   Compiling train|    Finished)"
+        2>&1 | grep -E "^(error|   Compiling (moe-test|train_bible|moe-llm)|    Finished)"
     ok "moe-test built"
     ok "train_bible built"
 fi
