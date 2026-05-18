@@ -1,0 +1,17 @@
+{
+  "contributor": "zabih-sudo",
+  "date": "2026-05-18",
+  "epoch_produced": 905,
+  "loss_at_production": 8.3244,
+  "corpus_mix": "default",
+  "notes": "",
+  "base_checkpoint": "bf4bc3680",
+  "architecture": {
+    "num_layers": 17,
+    "hidden_size": 256,
+    "num_experts": 12,
+    "vocab_size": 32000
+  },
+  "hardware": "unknown",
+  "safetensors_size_bytes": 512837576
+}
