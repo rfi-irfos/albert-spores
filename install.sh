@@ -223,10 +223,14 @@ def _push_spore(epoch, loss):
         # nice -n 15 lets the training process win every CPU/IO contest.
         cmd = ["nice", "-n", "15", sys.executable, PRODUCE, "--spores-repo", SPORES,
                "--name", contributor, "--epoch", str(epoch), "--loss", str(loss)]
-        r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
-        for ln in r.stdout.splitlines():
-            print(f"  {ln}")
-        print(f"[albert-train] auto-spore: ep{epoch} {'done' if r.returncode == 0 else 'FAILED'}")
+        try:
+            r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                               text=True, timeout=300)
+            for ln in r.stdout.splitlines():
+                print(f"  {ln}")
+            print(f"[albert-train] auto-spore: ep{epoch} {'done' if r.returncode == 0 else 'FAILED'}")
+        except subprocess.TimeoutExpired:
+            print(f"[albert-train] auto-spore: ep{epoch} TIMEOUT (5 min) — push killed, will retry next epoch")
     finally:
         _spore_lock.release()
 
