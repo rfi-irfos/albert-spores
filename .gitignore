@@ -1,0 +1,23 @@
+# Datasets — stay local, never push
+*.csv
+*.tsv
+*.parquet
+*.jsonl
+
+# Local training artifacts
+*.log
+*.pt
+*.bin
+*.gguf
+*.ggml
+
+# Python / Rust build artifacts
+__pycache__/
+*.pyc
+target/
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
