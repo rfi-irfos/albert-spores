@@ -64,6 +64,21 @@ else
     ok "gh installed"
 fi
 
+# git-lfs
+if git lfs version &>/dev/null; then
+    ok "git-lfs $(git lfs version | awk '{print $2}')"
+else
+    printf "  installing git-lfs...\n"
+    if [ "$OS" = "Darwin" ]; then
+        need_brew; brew install git-lfs
+    else
+        sudo apt-get install -y git-lfs -q
+    fi
+    ok "git-lfs installed"
+fi
+git lfs install --skip-smudge -q 2>/dev/null || git lfs install -q
+ok "git-lfs hooks active"
+
 # Rust
 if command -v cargo &>/dev/null; then
     ok "cargo $(cargo --version | awk '{print $2}')"
