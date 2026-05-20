@@ -102,13 +102,22 @@ else
 fi
 
 # ── 3. Build binaries ──────────────────────────────────────────────────────────
-step "3/6" "Building binaries (one-time, ~10-15 min)"
+step "3/6" "Building binaries"
 
 MOE_DIR="$TIS/albert-moe-13"
 
-if [ -f "$MOE_TEST" ] && [ -f "$TRAIN_BIBLE" ]; then
-    ok "moe-test and train_bible already built"
+# Rebuild if binaries are missing OR any .rs source is newer than the binary
+_needs_build=false
+if [ ! -f "$MOE_TEST" ] || [ ! -f "$TRAIN_BIBLE" ]; then
+    _needs_build=true
+elif find "$MOE_DIR" -name "*.rs" -newer "$TRAIN_BIBLE" | grep -q .; then
+    warn "source updated — rebuilding binaries"
+    _needs_build=true
 else
+    ok "moe-test and train_bible up to date"
+fi
+
+if $_needs_build; then
     printf "  compiling moe-test and train_bible from workspace...\n"
     # Both crates live in the albert-moe-13 workspace — build them together
     cargo build --release \
