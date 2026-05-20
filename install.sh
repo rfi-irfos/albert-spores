@@ -153,8 +153,8 @@ mkdir -p "$BIN"
 # albert-train — contributor build: 30 batches/epoch, auto-push on each checkpoint
 cat > "$BIN/albert-train" << 'HEREDOC'
 #!/usr/bin/env python3
-"""albert-train — contribute to albert. training (auto-push spore after each checkpoint)"""
-import os, sys, subprocess, signal, re, time, threading, webbrowser
+"""albert-train — contribute to albert. training (run albert-spore when done to push)"""
+import os, sys, subprocess, signal, re, time, webbrowser
 
 B="\033[38;5;33m"; G="\033[1;92m"; Y="\033[93m"; C="\033[96m"
 D="\033[2m"; LB="\033[38;5;75m"; RD="\033[91m"; R="\033[0m"; BD="\033[1;94m"
@@ -178,8 +178,6 @@ def colorize(line):
 PROJECT  = os.path.expanduser("~/projects/ternary-intelligence-stack/albert-moe-13")
 BINARY   = os.path.join(PROJECT, "target", "release", "train_bible")
 DASH_SRV = os.path.join(PROJECT, "dashboard", "run_server.py")
-SPORES   = os.path.expanduser("~/projects/albert-spores")
-PRODUCE  = os.path.join(PROJECT, "scripts", "produce_spore.py")
 LOG      = os.path.expanduser("~/.albert/training.log")
 os.makedirs(os.path.expanduser("~/.albert"), exist_ok=True)
 
@@ -187,22 +185,13 @@ if not os.path.exists(BINARY):
     print("[albert-train] train_bible not built — run: bash ~/projects/albert-spores/install.sh")
     sys.exit(1)
 
-# Resolve contributor name from gh auth — no flag needed
-try:
-    contributor = subprocess.check_output(
-        ["gh", "api", "user", "--jq", ".login"],
-        stderr=subprocess.DEVNULL,
-    ).decode().strip()
-except Exception:
-    contributor = os.environ.get("USER", "contributor")
-
 no_browser = "--no-browser" in sys.argv
 extra = [a for a in sys.argv[1:] if a != "--no-browser"]
 
 cmd = [BINARY, f"--root={PROJECT}", "--batches-per-epoch=30"] + extra
 
-print(f"{BD}--- albert. contributor training ({contributor}) ---{R}")
-print(f"log: {LOG}  |  30 batches/epoch  |  auto-push after each checkpoint  |  Ctrl-C to stop\n")
+print(f"{BD}--- albert. contributor training ---{R}")
+print(f"log: {LOG}  |  30 batches/epoch  |  Ctrl-C to stop\n")
 
 # Start dashboard server with CPU-safe stale thresholds
 if os.path.exists(DASH_SRV):
@@ -224,31 +213,6 @@ proc = subprocess.Popen(
     stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
 )
 
-# Auto-push spore after each epoch — lock prevents concurrent LFS pushes
-_EPOCH_SM_RE = re.compile(r'EPOCH_SUMMARY epoch=(\d+) loss_avg=[\d.]+ \(d[+\-][\d.]+\) loss_best=([\d.]+)')
-_spore_lock  = threading.Lock()
-
-def _push_spore(epoch, loss):
-    if not _spore_lock.acquire(blocking=False):
-        print(f"[albert-train] auto-spore: ep{epoch} — push in progress, skipping")
-        return
-    try:
-        print(f"[albert-train] auto-spore: ep{epoch} loss={loss:.4f} → pushing (low priority) ...")
-        # Run at low OS priority so the LFS upload doesn't compete with training.
-        # nice -n 15 lets the training process win every CPU/IO contest.
-        cmd = ["nice", "-n", "15", sys.executable, PRODUCE, "--spores-repo", SPORES,
-               "--name", contributor, "--epoch", str(epoch), "--loss", str(loss)]
-        try:
-            r = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                               text=True, timeout=300)
-            for ln in r.stdout.splitlines():
-                print(f"  {ln}")
-            print(f"[albert-train] auto-spore: ep{epoch} {'done' if r.returncode == 0 else 'FAILED'}")
-        except subprocess.TimeoutExpired:
-            print(f"[albert-train] auto-spore: ep{epoch} TIMEOUT (5 min) — push killed, will retry next epoch")
-    finally:
-        _spore_lock.release()
-
 def on_sigint(sig, frame):
     print("\n[albert-train] stopping...")
     proc.send_signal(signal.SIGINT)
@@ -262,14 +226,11 @@ for line in proc.stdout:
         sys.stdout.flush()
     log_f.write(line)
     log_f.flush()
-    sm = _EPOCH_SM_RE.search(line)
-    if sm:
-        ep, loss = int(sm.group(1)), float(sm.group(2))
-        threading.Thread(target=_push_spore, args=(ep, loss), daemon=True).start()
 
 proc.wait()
 log_f.close()
 print(f"\n{BD}--- Training stopped ---{R}")
+print(f"  run {B}albert-spore{R} to push your checkpoint to the colony\n")
 HEREDOC
 
 # albert-test
