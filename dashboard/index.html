@@ -71,8 +71,8 @@
             transition: border-color 0.2s;
         }
         .tb-cell:hover { border-color: var(--border2); }
-        .tb-cell.arch { flex: 0 0 auto; max-width: 240px; min-width: 0; overflow: hidden; }
-        .tb-cell.arch .tb-val { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; }
+        .tb-cell.arch { flex: 0 0 auto; min-width: 0; }
+        .tb-cell.arch .tb-val { white-space: nowrap; }
         .tb-cell.controls { background: transparent; border: none; margin-left: auto; gap: 4px; padding-right: 4px; }
         #help-btn { width:22px;height:22px;border-radius:50%;border:1px solid var(--border2);background:var(--bg2);color:var(--muted);font-size:11px;font-family:inherit;cursor:pointer;line-height:1;padding:0;flex-shrink:0; }
         .tb-label { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -90,7 +90,7 @@
             border-radius: 10px;
             padding: 12px 16px;
             z-index: 9990;
-            min-width: 230px;
+            min-width: 260px;
             box-shadow: 0 8px 24px rgba(0,0,0,0.7);
             font-size: 11px;
             line-height: 1.9;
@@ -924,14 +924,13 @@
         <span class="tb-val" id="v-batch">— / —</span>
     </div>
     <div class="tb-cell">
-        <span class="tb-label" title="All-time low — single batch minimum across full training history">ATL</span>
+        <span class="tb-label" title="All-time low — best batch loss across full training history. % = improvement since page load.">ATL</span>
         <span class="tb-val" id="v-best">—</span>
         <span id="v-best-pct" style="font-size:10px;color:#22c55e;margin-left:2px"></span>
     </div>
     <div class="tb-cell" id="gate-chip" title="Surgery Gate — click to expand">
         <span class="tb-label">GATE</span>
         <span id="gate-dots">
-            <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="gate-dot-loss" fill="#3f3f3f"/></svg>
             <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="gate-dot-myc" fill="#3f3f3f"/></svg>
             <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="gate-dot-plateau" fill="#3f3f3f"/></svg>
         </span>
@@ -988,6 +987,18 @@
                     <label class="dd-item"><input type="checkbox" id="cbSMA610"> ~ SMA-610 <small>F15 cycle</small></label>
                     <label class="dd-trail" title="Trail SMA-610 minimum"><input type="checkbox" id="cbTrail610"> T</label>
                 </div>
+                <div class="dd-row">
+                    <label class="dd-item"><input type="checkbox" id="cbSMA987"> ~ SMA-987 <small>F16 epoch</small></label>
+                    <label class="dd-trail" title="Trail SMA-987 minimum"><input type="checkbox" id="cbTrail987"> T</label>
+                </div>
+                <div class="dd-row">
+                    <label class="dd-item"><input type="checkbox" id="cbSMA1597"> ~ SMA-1597 <small>F17 grand</small></label>
+                    <label class="dd-trail" title="Trail SMA-1597 minimum"><input type="checkbox" id="cbTrail1597"> T</label>
+                </div>
+                <div class="dd-row">
+                    <label class="dd-item"><input type="checkbox" id="cbSMA2584"> ~ SMA-2584 <small>F18 arc</small></label>
+                    <label class="dd-trail" title="Trail SMA-2584 minimum"><input type="checkbox" id="cbTrail2584"> T</label>
+                </div>
                 <div class="dd-sep"></div>
                 <label class="dd-item"><input type="checkbox" id="cbTMA"> ≡ TMA <small>ternary</small></label>
             </div>
@@ -1038,12 +1049,6 @@
 <div id="gate-overlay">
     <div class="gate-title" id="gate-overlay-title">Surgery Gate — 17L → 18L</div>
     <div class="gate-row">
-        <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="ov-dot-loss" fill="#3f3f3f"/></svg>
-        <span class="gate-dot-lbl">Loss</span>
-        <span class="gate-val" id="ov-loss-val">—</span>
-        <span class="gate-sub">/ &lt; 9.80</span>
-    </div>
-    <div class="gate-row">
         <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="ov-dot-myc" fill="#3f3f3f"/></svg>
         <span class="gate-dot-lbl">myc_stable</span>
         <span class="gate-val" id="ov-myc-val">—</span>
@@ -1053,7 +1058,7 @@
         <svg width="7" height="7" viewBox="0 0 7 7"><circle cx="3.5" cy="3.5" r="3.5" id="ov-dot-plateau" fill="#3f3f3f"/></svg>
         <span class="gate-dot-lbl">Plateau</span>
         <span class="gate-val" id="ov-plateau-val">—</span>
-        <span class="gate-sub" id="ov-plateau-sub">delta / win</span>
+        <span class="gate-sub" id="ov-plateau-sub">/ win</span>
     </div>
     <div class="gate-footer" id="ov-footer">since_best — &middot; wald_fill —</div>
 </div>
@@ -1267,7 +1272,10 @@
     function scheduleChartUpdate() {
         if (_chartUpdatePending) return;
         _chartUpdatePending = true;
-        requestAnimationFrame(() => { _chartUpdatePending = false; if (!isInteracting) chart.update('none'); });
+        requestAnimationFrame(() => {
+            _chartUpdatePending = false;
+            if (!isInteracting) { applyRenderDistance(); chart.update('none'); }
+        });
     }
     function scheduleAnomalyRender() {
         if (_anomalyRenderPending) return;
@@ -1278,8 +1286,8 @@
     let batchLog         = [];   // [{step,global_epoch,batch,layers,loss,grad_norm,layer_norms,route_weights,entropy,tele_sparsity,tele_activity}]
     let epochLog         = [];   // [{local_epoch,global_epoch,layers,avg_loss,clipped,skipped}]
     let smaLog           = [];   // [{x,y}] — full batch point history; source of truth for SMA computation
-    let smaCacheFull     = [[], [], [], [], []]; // pre-computed SMA values: [21, 55, 144, 377, 610] — full history, never passed directly to Chart.js
-    const SMA_SIZES      = [21, 55, 144, 377, 610]; // Fibonacci SMA periods matching ds indices 1-5
+    let smaCacheFull     = [[], [], [], [], [], [], [], []]; // pre-computed SMA values: [21,55,144,377,610,987,1597,2584]
+    const SMA_SIZES      = [21, 55, 144, 377, 610, 987, 1597, 2584]; // Fibonacci SMA periods; ds indices 1-5,7-9
     let totalPts         = 0;
     let newPointStartIdx = Infinity; // index of first "new" pt — only those get drop animation
     let pulseActive      = false;
@@ -1311,17 +1319,20 @@
     let sporeEvents      = [];   // permanent spore ingestion markers
 
     // ── Candle / HA / BB / MACD / draw-tool state ─────────────────────
-    const epochCandles = new Map(); // global_epoch → {epoch,open,high,low,close,finalized,doji}
+    // Candles are built from epoch-averages in CANDLE_WINDOW-epoch buckets, then
+    // smoothed with Heikin-Ashi.  OHLC mode removed — batch-loss wicks were 20x
+    // the actual trend range and meaningless.
+    const epochAvgLog  = []; // {epoch, avgLoss} from EPOCH_SUMMARY, sorted asc
+    const CANDLE_WINDOW = 10; // epochs per HA candle
     let haCache        = [];
-    let candleMode     = false;
     let haMode         = false;
     let bbVisible      = false;
     let macdVisible    = false;
     let rsiVisible     = false;
     let macdChart      = null;
     let rsiChart       = null;
-    const trailActive     = [false, false, false, false, false]; // [21, 55, 144, 377, 610]
-    const trailCurrentMin = [Infinity, Infinity, Infinity, Infinity, Infinity];
+    const trailActive     = [false, false, false, false, false, false, false, false]; // [21,55,144,377,610,987,1597,2584]
+    const trailCurrentMin = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity, Infinity];
     let crosshairPos   = null;
     let crosshairRafId = null;
     let drawMode        = false;
@@ -1350,7 +1361,6 @@
     let lastDojiEp      = -999;
 
     // ── Surgery Gate state ───────────────────────────────────────────
-    let gGateLossBest   = null;
     let gGateSinceBest  = null;
     let gGateMycStable  = null;
     let gGateWaldFill   = null;
@@ -1382,13 +1392,6 @@
     function updateGateChip() {
         const C = { green: '#22c55e', orange: '#f59e0b', red: '#ef4444', grey: '#3f3f3f' };
 
-        // Loss gate: loss_best < 9.80
-        let lossCol = C.grey, lossText = '—';
-        if (gGateLossBest !== null) {
-            lossText = gGateLossBest.toFixed(4);
-            lossCol  = gGateLossBest < 9.80 ? C.green : gGateLossBest < 9.85 ? C.orange : C.red;
-        }
-
         // myc_stable gate: >= 5
         let mycCol = C.grey, mycText = '—';
         if (gGateMycStable !== null) {
@@ -1398,31 +1401,28 @@
 
         // Plateau gate: |oldest - newest| < plateau_threshold over Fibonacci window
         // While filling: Red (<66%) → Orange (66–99%) → Green (full + delta met)
-        let platCol = C.grey, platText = '—', platSub = 'filling window…';
+        let platCol = C.grey, platText = '—', platSub = '';
         if (gLossRing.length >= gGateFibWin) {
             const oldest = gLossRing[gLossRing.length - gGateFibWin];
             const latest = gLossRing[gLossRing.length - 1];
             const delta  = Math.abs(oldest - latest);
             platText = delta.toFixed(4);
-            platSub  = '/ < ' + gGatePlateauThresh.toFixed(3) + ' (win=' + gGateFibWin + ')';
+            platSub  = '/ <' + gGatePlateauThresh.toFixed(3) + ' w=' + gGateFibWin;
             platCol  = delta < gGatePlateauThresh ? C.green
                      : delta < gGatePlateauThresh * 3 ? C.orange : C.red;
         } else {
             platText = gLossRing.length + '/' + gGateFibWin;
+            platSub  = 'filling…';
             platCol  = (gLossRing.length / gGateFibWin) >= 0.66 ? C.orange : C.red;
         }
 
         // Chip dots
-        document.getElementById('gate-dot-loss').setAttribute('fill', lossCol);
         document.getElementById('gate-dot-myc').setAttribute('fill', mycCol);
         document.getElementById('gate-dot-plateau').setAttribute('fill', platCol);
 
         // Overlay values
-        document.getElementById('ov-dot-loss').setAttribute('fill', lossCol);
         document.getElementById('ov-dot-myc').setAttribute('fill', mycCol);
         document.getElementById('ov-dot-plateau').setAttribute('fill', platCol);
-        const ovLoss = document.getElementById('ov-loss-val');
-        ovLoss.textContent = lossText; ovLoss.style.color = lossCol;
         const ovMyc = document.getElementById('ov-myc-val');
         ovMyc.textContent = mycText; ovMyc.style.color = mycCol;
         const ovPlat = document.getElementById('ov-plateau-val');
@@ -1490,14 +1490,17 @@
 
             // Trail floor lines — one horizontal per active SMA trail
             const TRAIL_LINE_COLORS = [
-                'rgba(255,215,0,0.70)',   // T21  — gold
-                'rgba(245,158,11,0.70)',  // T55  — amber
-                'rgba(136,153,255,0.70)', // T144 — blue-purple
-                'rgba(167,139,250,0.70)', // T377 — violet
-                'rgba(124,58,237,0.70)',  // T610 — deep purple
+                'rgba(253,224,71,0.80)',  // T21   — yellow
+                'rgba(251,146,60,0.80)',  // T55   — orange
+                'rgba(56,189,248,0.80)',  // T144  — sky blue
+                'rgba(129,140,248,0.80)', // T377  — indigo
+                'rgba(192,132,252,0.80)', // T610  — purple
+                'rgba(232,121,249,0.80)', // T987  — fuchsia
+                'rgba(244,114,182,0.80)', // T1597 — pink
+                'rgba(248,113,113,0.80)', // T2584 — coral-red
             ];
-            const TRAIL_NAMES = ['T-21','T-55','T-144','T-377','T-610'];
-            for (let ti = 0; ti < 5; ti++) {
+            const TRAIL_NAMES = ['T-21','T-55','T-144','T-377','T-610','T-987','T-1597','T-2584'];
+            for (let ti = 0; ti < 8; ti++) {
                 if (!trailActive[ti] || !isFinite(trailCurrentMin[ti])) continue;
                 const col  = TRAIL_LINE_COLORS[ti];
                 const colF = col.replace(/[\d.]+\)$/, '0.30)');
@@ -1792,8 +1795,8 @@
         id: 'bbBand',
         beforeDatasetsDraw(chart) {
             if (!bbVisible) return;
-            const upper = chart.data.datasets[7].data;
-            const lower = chart.data.datasets[8].data;
+            const upper = chart.data.datasets[10].data;
+            const lower = chart.data.datasets[11].data;
             if (!upper.length || !lower.length) return;
             const { ctx: c2, chartArea: a, scales } = chart;
             c2.save();
@@ -1821,9 +1824,9 @@
     const candlePlugin = {
         id: 'candleDraw',
         afterDraw(chart) {
-            if (!candleMode && !haMode) return;
+            if (!haMode) return;
             const { ctx: c2, chartArea: a, scales } = chart;
-            const candles = haMode ? haCache : [...epochCandles.values()];
+            const candles = haCache;
             if (!candles.length) return;
             const unitPx = Math.abs(scales.x.getPixelForValue(1) - scales.x.getPixelForValue(0));
             const halfW  = Math.max(1.5, unitPx * 0.28);
@@ -2231,7 +2234,7 @@
                     type: 'line',
                     label: 'SMA-21',
                     data: [],
-                    borderColor: '#ffd700',
+                    borderColor: '#fde047',
                     borderWidth: 1,
                     fill: false,
                     pointRadius: 0,
@@ -2244,7 +2247,7 @@
                     type: 'line',
                     label: 'SMA-55',
                     data: [],
-                    borderColor: '#f59e0b',
+                    borderColor: '#fb923c',
                     borderWidth: 1.5,
                     fill: false,
                     pointRadius: 0,
@@ -2257,7 +2260,7 @@
                     type: 'line',
                     label: 'SMA-144',
                     data: [],
-                    borderColor: '#8899ff',
+                    borderColor: '#38bdf8',
                     borderWidth: 2,
                     fill: false,
                     pointRadius: 0,
@@ -2270,7 +2273,7 @@
                     type: 'line',
                     label: 'SMA-377',
                     data: [],
-                    borderColor: '#a78bfa',
+                    borderColor: '#818cf8',
                     borderWidth: 2,
                     fill: false,
                     pointRadius: 0,
@@ -2283,7 +2286,7 @@
                     type: 'line',
                     label: 'SMA-610',
                     data: [],
-                    borderColor: '#7c3aed',
+                    borderColor: '#c084fc',
                     borderWidth: 2.5,
                     fill: false,
                     pointRadius: 0,
@@ -2306,6 +2309,45 @@
                     order: 1,
                     animation: false,
                     hidden: true,        // off by default, user enables it
+                },
+                {
+                    type: 'line',
+                    label: 'SMA-987',
+                    data: [],
+                    borderColor: '#e879f9',
+                    borderWidth: 3,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    order: 1,
+                    animation: false,
+                    hidden: true,
+                },
+                {
+                    type: 'line',
+                    label: 'SMA-1597',
+                    data: [],
+                    borderColor: '#f472b6',
+                    borderWidth: 3.5,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    order: 1,
+                    animation: false,
+                    hidden: true,
+                },
+                {
+                    type: 'line',
+                    label: 'SMA-2584',
+                    data: [],
+                    borderColor: '#f87171',
+                    borderWidth: 4,
+                    fill: false,
+                    pointRadius: 0,
+                    tension: 0,
+                    order: 1,
+                    animation: false,
+                    hidden: true,
                 },
                 {
                     type: 'line',
@@ -2365,31 +2407,31 @@
                 },
                 {
                     type: 'line', label: 'Trail-21', data: [],
-                    borderColor: 'rgba(255,215,0,0.45)', borderWidth: 1, borderDash: [2, 5],
+                    borderColor: 'rgba(253,224,71,0.45)', borderWidth: 1, borderDash: [2, 5],
                     fill: false, pointRadius: 0, tension: 0, stepped: 'after',
                     order: 1, animation: false, hidden: true,
                 },
                 {
                     type: 'line', label: 'Trail-55', data: [],
-                    borderColor: 'rgba(245,158,11,0.45)', borderWidth: 1, borderDash: [2, 5],
+                    borderColor: 'rgba(251,146,60,0.45)', borderWidth: 1, borderDash: [2, 5],
                     fill: false, pointRadius: 0, tension: 0, stepped: 'after',
                     order: 1, animation: false, hidden: true,
                 },
                 {
                     type: 'line', label: 'Trail-144', data: [],
-                    borderColor: 'rgba(136,153,255,0.45)', borderWidth: 1, borderDash: [2, 5],
+                    borderColor: 'rgba(56,189,248,0.45)', borderWidth: 1, borderDash: [2, 5],
                     fill: false, pointRadius: 0, tension: 0, stepped: 'after',
                     order: 1, animation: false, hidden: true,
                 },
                 {
                     type: 'line', label: 'Trail-377', data: [],
-                    borderColor: 'rgba(167,139,250,0.45)', borderWidth: 1, borderDash: [2, 5],
+                    borderColor: 'rgba(129,140,248,0.45)', borderWidth: 1, borderDash: [2, 5],
                     fill: false, pointRadius: 0, tension: 0, stepped: 'after',
                     order: 1, animation: false, hidden: true,
                 },
                 {
                     type: 'line', label: 'Trail-610', data: [],
-                    borderColor: 'rgba(124,58,237,0.45)', borderWidth: 1, borderDash: [2, 5],
+                    borderColor: 'rgba(192,132,252,0.45)', borderWidth: 1, borderDash: [2, 5],
                     fill: false, pointRadius: 0, tension: 0, stepped: 'after',
                     order: 1, animation: false, hidden: true,
                 }
@@ -2420,6 +2462,7 @@
             scales: {
                 x: {
                     type: 'linear',
+                    min: 0,
                     title: { display: true, text: 'Global Epoch', color: '#64748b', font: { size: 11 } },
                     grid: { color: '#1e2d40' },
                     ticks: { color: '#94a3b8', font: { size: 10 } }
@@ -2427,12 +2470,11 @@
                 y: {
                     afterDataLimits: (axis) => {
                         if (isInteracting) return; // skip during pan/zoom — avoids lag
-                        const ohlcActive = haMode || document.getElementById('cbOHLC').checked;
-                        if (!ohlcActive) return;
+                        if (!haMode) return;
                         const xScale = axis.chart.scales.x;
                         if (!xScale) return;
                         const xMin = xScale.min, xMax = xScale.max;
-                        const src = haMode ? haCache : [...epochCandles.values()];
+                        const src = haCache;
                         let lo = Infinity, hi = -Infinity;
                         for (const c of src) {
                             if (c.epoch < xMin || c.epoch > xMax) continue;
@@ -2488,7 +2530,7 @@
                             c.canvas.style.cursor = 'grabbing';
                             document.body.style.cursor = 'grabbing';
                         },
-                        onPanComplete: ({ chart: c }) => { isInteracting = false; c.canvas.style.cursor = 'grab'; document.body.style.cursor = ''; chart.stop(); applyRenderDistance(); chart.update('none'); syncSubChartX(); }
+                        onPanComplete: ({ chart: c }) => { isInteracting = false; c.canvas.style.cursor = 'grab'; document.body.style.cursor = ''; chart.stop(); chart.update('none'); syncSubChartX(); }
                     },
                     zoom: {
                         wheel: { enabled: true, speed: 0.20 }, pinch: { enabled: true }, mode: 'xy',
@@ -2504,7 +2546,6 @@
                                 _t = setTimeout(() => {
                                     isInteracting = false;
                                     chart.stop();
-                                    applyRenderDistance();
                                     chart.update('none');
                                     syncSubChartX();
                                 }, 120);
@@ -2791,6 +2832,19 @@
     });
 
     // ── SMA — O(n) sliding window sum, not O(n²) slice+reduce ──────────
+    // Even-stride downsample of a full SMA cache for the initial preseed render.
+    // smaVisibleSlice() can't be used at preseed time because the chart viewport
+    // only covers the narrow scatter seedSlice range — the wider epoch-avg range
+    // isn't known yet. Downsampling to MAX_CHART_PTS covers the full history at
+    // adequate density (one point per ~0.5 epochs at 761k-point history).
+    function smaPreseedData(fullArr) {
+        if (fullArr.length <= MAX_CHART_PTS) return fullArr;
+        const step = Math.floor(fullArr.length / MAX_CHART_PTS);
+        const out = [];
+        for (let i = 0; i < fullArr.length; i += step) out.push(fullArr[i]);
+        if (out[out.length - 1] !== fullArr[fullArr.length - 1]) out.push(fullArr[fullArr.length - 1]);
+        return out;
+    }
     function sma(data, w) {
         if (data.length < w) return [];
         const result = [];
@@ -2812,24 +2866,28 @@
     }
     // Slice a pre-computed SMA array to the current chart viewport + overhang buffer.
     // Passes only visible points to Chart.js — reduces rendered nodes by 10-100x when zoomed in.
+    // Caps at MAX_CHART_PTS via even-stride downsample when the viewport covers a very wide
+    // range (e.g. full history at default zoom) to prevent passing 700k+ points to Chart.js.
     function smaVisibleSlice(fullArr) {
         if (!fullArr.length) return fullArr;
         const scale = chart.scales.x;
-        if (!scale) return fullArr;
+        if (!scale) return smaPreseedData(fullArr);
         const span = Math.max(scale.max - scale.min, 10);
         const buf  = span * 0.30 + 20; // 30% overhang each side + 20ep fixed pad
         const lo   = Math.max(0, lowerBound(fullArr, scale.min - buf));
         const hi   = Math.min(fullArr.length, lowerBound(fullArr, scale.max + buf));
-        return fullArr.slice(lo, hi);
+        const slice = fullArr.slice(lo, hi);
+        return slice.length <= MAX_CHART_PTS ? slice : smaPreseedData(slice);
     }
     // Re-apply render distance to all visible SMA datasets (call after zoom/pan/reset).
+    // Push the current downsampled SMA representation to all visible SMA datasets.
+    // Always uses smaPreseedData (zoom-independent) so the SMA never reshapes on zoom.
     function applyRenderDistance() {
         const ds = chart.data.datasets;
-        for (let i = 0; i < 5; i++) {
-            if (!ds[i + 1].hidden && smaCacheFull[i].length) {
-                ds[i + 1].data = smaVisibleSlice(smaCacheFull[i]);
-            }
-        }
+        [[1,0],[2,1],[3,2],[4,3],[5,4],[7,5],[8,6],[9,7]].forEach(([dsIdx, ci]) => {
+            if (!ds[dsIdx].hidden && smaCacheFull[ci].length)
+                ds[dsIdx].data = smaPreseedData(smaCacheFull[ci]);
+        });
     }
 
     // ── TMA — Ternary Moving Average ───────────────────────────────────
@@ -3070,11 +3128,53 @@
             const haOpen  = prevOpen === null ? (c.open + c.close) / 2 : (prevOpen + prevClose) / 2;
             const haHigh  = Math.max(c.high, haOpen, haClose);
             const haLow   = Math.min(c.low,  haOpen, haClose);
-            ha.push({ epoch: c.epoch, open: haOpen, high: haHigh, low: haLow, close: haClose, doji: false, bootstrap: prevOpen === null });
+            ha.push({ epoch: c.epoch, open: haOpen, high: haHigh, low: haLow, close: haClose, doji: c.doji, bootstrap: prevOpen === null });
             prevOpen  = haOpen;
             prevClose = haClose;
         }
         return ha;
+    }
+
+    // ── Build HA candles from epoch-average windows ────────────────────
+    // Each raw candle = CANDLE_WINDOW consecutive epoch-avg losses.
+    // O/H/L/C are epoch-avg values (not batch losses), so wicks match the
+    // actual trend range.  HA smoothing is applied on top.
+    function rebuildHACandles() {
+        if (epochAvgLog.length < 2) { haCache = []; return; }
+        const sorted = [...epochAvgLog].sort((a, b) => a.epoch - b.epoch);
+        const minEp  = sorted[0].epoch;
+        // Group into buckets of CANDLE_WINDOW epochs
+        const buckets = new Map();
+        for (const { epoch, avgLoss } of sorted) {
+            const bi = Math.floor((epoch - minEp) / CANDLE_WINDOW);
+            if (!buckets.has(bi)) buckets.set(bi, { startEp: minEp + bi * CANDLE_WINDOW, losses: [], lastEp: epoch });
+            const b = buckets.get(bi);
+            b.losses.push(avgLoss);
+            b.lastEp = epoch;
+        }
+        const maxBi = Math.max(...buckets.keys());
+        const rawCandles = [];
+        for (const [bi, b] of [...buckets.entries()].sort((a, b) => a[0] - b[0])) {
+            const finalized = bi < maxBi;
+            const open  = b.losses[0];
+            const close = b.losses[b.losses.length - 1];
+            const high  = Math.max(...b.losses);
+            const low   = Math.min(...b.losses);
+            // Doji: body < 10% of wick on finalized candles
+            const body  = Math.abs(close - open);
+            const wick  = high - low;
+            const doji  = finalized && wick > 0.0001 && body / wick < 0.10 && b.lastEp !== lastDojiEp;
+            if (doji) {
+                lastDojiEp = b.lastEp;
+                if (!initialLoad) {
+                    addEvent('doji', `DOJI ep${b.lastEp}`, 'warn',
+                        `Doji candle at ep${b.lastEp} — body ${(body / wick * 100).toFixed(1)}% of window range (indecision).<br>` +
+                        `O:${open.toFixed(4)}  H:${high.toFixed(4)}  L:${low.toFixed(4)}  C:${close.toFixed(4)}`);
+                }
+            }
+            rawCandles.push({ epoch: b.lastEp, open, high, low, close, finalized, doji });
+        }
+        haCache = computeHACandles(rawCandles);
     }
 
     // ── Status bar helpers ─────────────────────────────────────────────
@@ -3087,7 +3187,6 @@
         document.getElementById('v-batch').textContent = `${latest.batch} / ${gBatchesPerEpoch}`;
         // v-tns updated separately when "Loaded X tensors" line is parsed
 
-        if (sessionStartLoss === null) sessionStartLoss = loss;
         if (loss < bestLoss)  { bestLoss  = loss; }
         if (loss < allTimeBestBatch) { allTimeBestBatch = loss; }
         if (loss > worstLoss) { worstLoss = loss; }
@@ -3185,14 +3284,14 @@
                 if (line.startsWith('RUN_START ')) {
                     newPts.length = 0;
                     chart.data.datasets.forEach(ds => ds.data = []);
-                    epochCandles.clear(); haCache = [];
+                    epochAvgLog.length = 0; haCache = [];
                     bestLoss = allTimeBestBatch; worstLoss = -Infinity;
                     sessionStartLoss = null; totalPts = 0;
                     lastLossVal = null; lastKnownEpoch = -1;
                     trailCurrentMin.fill(Infinity);
                     userHasZoomed = false; newPointStartIdx = Infinity;
                     batchLog = []; smaLog.length = smaPreSeedLen; // epochLog preserved; smaPreSeedLen preserves historical pre-seed
-                    smaCacheFull = [[], [], [], [], []]; // clear SMA caches — will recompute from pre-seed on next poll
+                    smaCacheFull = [[], [], [], [], [], [], [], []]; // clear SMA caches — will recompute from pre-seed on next poll
                     document.getElementById('v-loss').textContent  = '—';
                     document.getElementById('v-epoch').textContent = '—';
                     document.getElementById('v-best').textContent  = allTimeBestBatch === Infinity ? '—' : allTimeBestBatch.toFixed(4);
@@ -3233,12 +3332,16 @@
                             `Net2Net surgery fired — model expanded from ${lastNumLayers} to ${numLayers} layers.<br>New layer inserted with identity mapping. Expect brief loss spike.`);
                         playSurgery();
                         notify('albert. — SURGERY', `Model expanded ${lastNumLayers}L → ${numLayers}L. Expect brief loss spike.`);
+                        // Reset plateau ring — post-surgery epoch history is a new era
+                        gLossRing = [];
+                        updateGateChip();
                     }
                     lastNumLayers = numLayers;
                     lastTeleMs = Date.now();
                     latestTele = { numLayers, layerSparsity, expertActivity };
                     renderNeuralViz(latestTele);
                     if (window.mycBrainUpdate) mycBrainUpdate({ tele: latestTele });
+                    if (window.mycFlowUpdate) mycFlowUpdate({ numLayers });
                     _streamBC.postMessage({ type: 'tele', data: latestTele });
                     continue;
                 }
@@ -3371,6 +3474,24 @@
                     }
                     continue;
                 }
+                // Fibonacci plateau trigger line — real delta from EvolutionManager
+                // Format: "--- FIBONACCI PLATEAU TRIGGERED (Δ0.0193 over 144 epochs, ...)"
+                if (line.includes('FIBONACCI PLATEAU TRIGGERED')) {
+                    const pm = line.match(/Δ([\d.]+) over (\d+) epochs/);
+                    if (pm) {
+                        const fibDelta = parseFloat(pm[1]);
+                        const fibWin   = parseInt(pm[2]);
+                        // Display the Rust-computed delta directly — more reliable than ring
+                        const ovPlat = document.getElementById('ov-plateau-val');
+                        if (ovPlat) {
+                            ovPlat.textContent = fibDelta.toFixed(4);
+                            ovPlat.style.color = fibDelta < gGatePlateauThresh ? '#4caf50' : '#ef5350';
+                        }
+                        const ovSub = document.getElementById('ov-plateau-sub');
+                        if (ovSub) ovSub.textContent = `/ < ${gGatePlateauThresh.toFixed(3)} (win=${fibWin}) [Rust]`;
+                    }
+                    continue;
+                }
                 // Evolution & system event lines
                 if (line.includes('[evolution] Plateau detected')) {
                     const lm = line.match(/loss ([\d.]+)/);
@@ -3423,17 +3544,6 @@
                     y: loss,
                     epoch, batch, layers
                 });
-                // OHLC candle tracking — build per-epoch candle as batches arrive
-                {
-                    const ec = epochCandles.get(epoch);
-                    if (!ec) {
-                        epochCandles.set(epoch, { epoch, open: loss, high: loss, low: loss, close: loss, finalized: false, doji: false });
-                    } else if (!ec.finalized) {
-                        if (loss > ec.high) ec.high = loss;
-                        if (loss < ec.low)  ec.low  = loss;
-                        ec.close = loss;
-                    }
-                }
                 // Snapshot all available telemetry into the batch log for CSV export
                 batchLog.push({
                     step:          (epoch - 1) * gBatchesPerEpoch + batch,
@@ -3480,20 +3590,20 @@
                 chart.data.datasets[2].data = [];
                 chart.data.datasets[3].data = [];
                 chart.data.datasets[4].data = [];
-                chart.data.datasets[7].data = [];
-                chart.data.datasets[8].data = [];
-                chart.data.datasets[9].data = [];   // MACD placeholder — data in macdChart
-                chart.data.datasets[10].data = [];  // RSI placeholder — data in rsiChart
+                chart.data.datasets[10].data = [];
+                chart.data.datasets[11].data = [];
+                chart.data.datasets[12].data = [];  // MACD placeholder — data in macdChart
+                chart.data.datasets[13].data = [];  // RSI placeholder — data in rsiChart
                 if (macdChart) { macdChart.data.datasets[0].data = []; macdChart.update('none'); }
                 if (rsiChart)  { rsiChart.data.datasets[0].data  = []; rsiChart.update('none'); }
                 for (let i = 11; i <= 15; i++) chart.data.datasets[i].data = [];
                 trailCurrentMin.fill(Infinity);
-                epochCandles.clear();
+                epochAvgLog.length = 0;
                 haCache = [];
                 lastSmaY       = null;
                 bestLoss       = allTimeBestBatch;
                 worstLoss      = -Infinity;
-                sessionStartLoss = null;
+                sessionStartLoss = allTimeBestBatch < Infinity ? allTimeBestBatch : null;
                 totalPts       = 0;
                 lastLossVal    = null;
                 pendingEntropy = null;
@@ -3566,13 +3676,16 @@
                         cache.push({ x: smaLog[i].x, y: sum / w });
                     }
                 }
-                if (!ds[dsIdx].hidden) ds[dsIdx].data = smaVisibleSlice(smaCacheFull[ci]);
+                if (!ds[dsIdx].hidden) ds[dsIdx].data = smaPreseedData(smaCacheFull[ci]);
             }
-            updateSma(1, 21,  0);
-            updateSma(2, 55,  1);
-            updateSma(3, 144, 2);
-            updateSma(4, 377, 3);
-            updateSma(5, 610, 4);
+            updateSma(1, 21,   0);
+            updateSma(2, 55,   1);
+            updateSma(3, 144,  2);
+            updateSma(4, 377,  3);
+            updateSma(5, 610,  4);
+            updateSma(7, 987,  5);
+            updateSma(8, 1597, 6);
+            updateSma(9, 2584, 7);
             if (!ds[6].hidden) ds[6].data = tma(merged, 30);
             // Bollinger Bands on SMA-144 window
             if (bbVisible) {
@@ -3586,8 +3699,8 @@
                 updateSubCharts(epD);
             }
             // SMA trail — track live tip (last point) of each active SMA
-            const trailSrc = [ds[1], ds[2], ds[3], ds[4], ds[5]];
-            for (let ti = 0; ti < 5; ti++) {
+            const trailSrc = [ds[1], ds[2], ds[3], ds[4], ds[5], ds[7], ds[8], ds[9]];
+            for (let ti = 0; ti < 8; ti++) {
                 if (!trailActive[ti]) continue;
                 const src = trailSrc[ti].data;
                 if (!src.length) continue;
@@ -3596,7 +3709,7 @@
 
             // Update reference line from epoch summary lines and emit EPOCH / BEST events
             for (const line of lines) {
-                const em = line.match(/Avg Loss:\s*([\d.]+)/);
+                const em = line.startsWith('===') && line.match(/Avg Loss:\s*([\d.]+)/);
                 if (em) {
                     const epochAvg = parseFloat(em[1]);
                     lastSmaY = epochAvg;
@@ -3638,12 +3751,11 @@
                     last.wald_fill = parseFloat(epsm[6]);
                     last.ttlfreeze = parseInt(epsm[7]);
                     // Gate state — update on every epoch
-                    gGateLossBest  = parseFloat(epsm[3]);
                     gGateSinceBest = parseInt(epsm[4]);
                     gGateWaldFill  = parseFloat(epsm[6]);
                     gGateWaldSev   = parseFloat(epsm[5]);
                     gLossRing.push(parseFloat(epsm[2]));
-                    if (gLossRing.length > 150) gLossRing.shift();
+                    if (gLossRing.length > gGateFibWin) gLossRing.shift();
                     updateGateChip();
                     // Tensor count — re-emitted every epoch so dashboard always has it in the tail window
                     const tnse = line.match(/tns=(\d+)/);
@@ -3652,27 +3764,14 @@
                         document.getElementById('v-tns').textContent = _tv.toLocaleString();
                         localStorage.setItem('albert_tns', _tv);
                     }
-                    // Finalize the OHLC candle for this epoch + doji detection
+                    // Accumulate epoch average and rebuild HA candle windows
                     const ep = parseInt(epsm[1]);
-                    const ec = epochCandles.get(ep);
-                    if (ec && !ec.finalized) {
-                        ec.finalized = true;
-                        const body = Math.abs(ec.close - ec.open);
-                        const wick = ec.high - ec.low;
-                        if (wick > 0.0005 && body / wick < 0.10 && ep !== lastDojiEp) {
-                            ec.doji  = true;
-                            lastDojiEp = ep;
-                            liveEvent('doji', `DOJI ep${ep}`, 'warn',
-                                `Doji candle at ep${ep} — body ${(body/wick*100).toFixed(1)}% of range (indecision).<br>` +
-                                `O:${ec.open.toFixed(4)}  H:${ec.high.toFixed(4)}  L:${ec.low.toFixed(4)}  C:${ec.close.toFixed(4)}<br>` +
-                                `At a Fib level, doji signals a potential inflection point.`);
-                        }
-                        if (haMode) {
-                            haCache = computeHACandles(
-                                [...epochCandles.values()].filter(c => c.finalized).sort((a, b) => a.epoch - b.epoch)
-                            );
-                        }
-                    }
+                    const avgLoss = parseFloat(epsm[2]);
+                    // Upsert: replace if epoch already logged (replay idempotency)
+                    const existIdx = epochAvgLog.findIndex(e => e.epoch === ep);
+                    if (existIdx >= 0) epochAvgLog[existIdx].avgLoss = avgLoss;
+                    else epochAvgLog.push({ epoch: ep, avgLoss });
+                    if (haMode) rebuildHACandles();
                 }
 
                 // MYCELIUM — update myc_stable for surgery gate
@@ -3682,19 +3781,25 @@
                     updateGateChip();
                 }
 
-                // Evolution log lines — parse window and threshold dynamically.
-                // Matches: Calibrated, Restored, and post-surgery Gen step lines.
-                // The Restored line wins over Calibrated (appears later in log on restart).
-                const evolm = line.match(/\[evolution\].*window=(\d+) epochs/);
-                if (evolm) {
-                    gGateFibWin = parseInt(evolm[1]);
-                    // Trim the ring buffer to the new window size
-                    if (gLossRing.length > gGateFibWin + 50) {
-                        gLossRing = gLossRing.slice(-(gGateFibWin + 50));
-                    }
-                    const thrm = line.match(/threshold=([\d.]+)/);
+                // Evolution log lines — split on line type:
+                // Gen step (surgery advance): reset ring — new era, counts from zero
+                // Restored/Calibrated (restart): trim only — same era, keep history
+                const genStepM = line.match(/\[evolution\] Gen \d+ step \d+\/\d+ → window=(\d+) epochs/);
+                if (genStepM) {
+                    gGateFibWin = parseInt(genStepM[1]);
+                    gLossRing   = [];  // surgery boundary — epoch count starts from zero
+                    const thrm  = line.match(/threshold=([\d.]+)/);
                     if (thrm) gGatePlateauThresh = parseFloat(thrm[1]);
                     updateGateChip();
+                } else {
+                    const restoredM = line.match(/\[evolution\].*window=(\d+) epochs/);
+                    if (restoredM) {
+                        gGateFibWin = parseInt(restoredM[1]);
+                        if (gLossRing.length > gGateFibWin) gLossRing = gLossRing.slice(-gGateFibWin);
+                        const thrm = line.match(/threshold=([\d.]+)/);
+                        if (thrm) gGatePlateauThresh = parseFloat(thrm[1]);
+                        updateGateChip();
+                    }
                 }
 
                 // WALD dead-zone event — fires only when the dead signature changes
@@ -3778,6 +3883,7 @@
             const minPt = newPts.reduce((a, b) => b.y < a.y ? b : a, newPts[newPts.length - 1]);
             const prevATL = allTimeBestBatch;
             updateTopbar(minPt.y < bestLoss ? minPt : newPts[newPts.length - 1]);
+            updateGateChip(); // keep overlay in sync on every poll cycle
             if (!isReplay && allTimeBestBatch < prevATL && prevATL < Infinity) {
                 const impPct = ((prevATL - allTimeBestBatch) / prevATL * 100).toFixed(3);
                 notify('albert. — NEW ATL', `${allTimeBestBatch.toFixed(4)} · ↓${impPct}% vs ${prevATL.toFixed(4)}`);
@@ -3790,16 +3896,18 @@
     // ── Controls ───────────────────────────────────────────────────────
     // ── Curves dropdown ──────────────────────────────────────────────
     function updateSmaBtnLabel() {
-        const total = ['cbDots','cbSMA21','cbSMA55','cbSMA144','cbSMA377','cbSMA610','cbTMA']
+        const total = ['cbDots','cbSMA21','cbSMA55','cbSMA144','cbSMA377','cbSMA610',
+                       'cbSMA987','cbSMA1597','cbSMA2584','cbTMA']
             .filter(id => document.getElementById(id).checked).length;
         document.getElementById('curves-count').textContent = total;
     }
     function toggleDataset(idx, checked) {
         chart.data.datasets[idx].hidden = !checked;
-        if (checked && idx >= 1 && idx <= 5) {
-            const ci = idx - 1;
+        // SMA datasets: ds 1-5 → ci 0-4; ds 7-9 → ci 5-7
+        if (checked && (idx >= 1 && idx <= 5 || idx >= 7 && idx <= 9)) {
+            const ci = idx <= 5 ? idx - 1 : idx - 2;
             if (!smaCacheFull[ci].length) smaCacheFull[ci] = sma(smaLog, SMA_SIZES[ci]);
-            chart.data.datasets[idx].data = smaVisibleSlice(smaCacheFull[ci]);
+            chart.data.datasets[idx].data = smaPreseedData(smaCacheFull[ci]);
         }
         chart.update('none');
         updateSmaBtnLabel();
@@ -3815,8 +3923,11 @@
     document.getElementById('cbSMA55').addEventListener('change',  function() { toggleDataset(2, this.checked); });
     document.getElementById('cbSMA144').addEventListener('change', function() { toggleDataset(3, this.checked); });
     document.getElementById('cbSMA377').addEventListener('change', function() { toggleDataset(4, this.checked); });
-    document.getElementById('cbSMA610').addEventListener('change', function() { toggleDataset(5, this.checked); });
-    document.getElementById('cbTMA').addEventListener('change',    function() { toggleDataset(6, this.checked); });
+    document.getElementById('cbSMA610').addEventListener('change',  function() { toggleDataset(5, this.checked); });
+    document.getElementById('cbSMA987').addEventListener('change',  function() { toggleDataset(7, this.checked); });
+    document.getElementById('cbSMA1597').addEventListener('change', function() { toggleDataset(8, this.checked); });
+    document.getElementById('cbSMA2584').addEventListener('change', function() { toggleDataset(9, this.checked); });
+    document.getElementById('cbTMA').addEventListener('change',     function() { toggleDataset(6, this.checked); });
     // TMA starts hidden
     chart.data.datasets[6].hidden = true;
     updateSmaBtnLabel();
@@ -4862,15 +4973,18 @@
         csvDownload(parts.join('\n'), `albert_full_${Date.now()}.csv`);
     });
 
-    // Gate chip — toggle overlay
+    // Gate chip — toggle overlay; force re-render + poll on every open
     const _gateChip    = document.getElementById('gate-chip');
     const _gateOverlay = document.getElementById('gate-overlay');
-    _gateChip.addEventListener('click', function(e) {
+    _gateChip.addEventListener('click', async function(e) {
         e.stopPropagation();
         const rect = _gateChip.getBoundingClientRect();
         _gateOverlay.style.left = rect.left + 'px';
         _gateOverlay.style.top  = (rect.bottom + 6) + 'px';
         _gateOverlay.classList.toggle('open');
+        updateGateChip(); // immediate render with current state
+        await poll();     // always fetch fresh data on every click
+        updateGateChip(); // re-render with any new epoch summaries from the poll
     });
     _gateOverlay.addEventListener('click', e => e.stopPropagation());
 
@@ -4901,44 +5015,29 @@
     // Bollinger Bands
     document.getElementById('cbBB').addEventListener('change', function() {
         bbVisible = this.checked;
-        chart.data.datasets[7].hidden = !bbVisible;
-        chart.data.datasets[8].hidden = !bbVisible;
+        chart.data.datasets[10].hidden = !bbVisible;
+        chart.data.datasets[11].hidden = !bbVisible;
         if (bbVisible) {
             const merged = chart.data.datasets[0].data;
             if (merged.length) {
                 const bb = bollinger(merged, 144, 2);
-                chart.data.datasets[7].data = bb.upper;
-                chart.data.datasets[8].data = bb.lower;
+                chart.data.datasets[10].data = bb.upper;
+                chart.data.datasets[11].data = bb.lower;
             }
         }
         chart.update('none');
     });
 
-    // OHLC candlesticks — mutually exclusive with HA
-    document.getElementById('cbOHLC').addEventListener('change', function() {
-        candleMode = this.checked;
-        if (candleMode && haMode) {
-            haMode = false;
-            document.getElementById('cbHA').checked = false;
-        }
-        // Only reveal dots if the user still has them checked — don't reactivate a hidden dots layer.
-        chart.data.datasets[0].hidden = (candleMode || haMode) || !document.getElementById('cbDots').checked;
-        chart.update('none');
-    });
+    // OHLC removed — batch-loss wicks were meaningless vs actual trend range.
+    // Checkbox kept in DOM but disabled so saved prefs don't error.
+    document.getElementById('cbOHLC').disabled = true;
+    document.getElementById('cbOHLC').checked  = false;
 
-    // Heikin-Ashi — mutually exclusive with OHLC
+    // Heikin-Ashi — epoch-avg window candles with HA smoothing
     document.getElementById('cbHA').addEventListener('change', function() {
         haMode = this.checked;
-        if (haMode) {
-            haCache = computeHACandles(
-                [...epochCandles.values()].filter(c => c.finalized).sort((a, b) => a.epoch - b.epoch)
-            );
-            if (candleMode) {
-                candleMode = false;
-                document.getElementById('cbOHLC').checked = false;
-            }
-        }
-        chart.data.datasets[0].hidden = (candleMode || haMode) || !document.getElementById('cbDots').checked;
+        if (haMode) rebuildHACandles();
+        chart.data.datasets[0].hidden = haMode || !document.getElementById('cbDots').checked;
         chart.update('none');
     });
 
@@ -4969,20 +5068,19 @@
     });
 
     // SMA trail toggles — running minimum of the corresponding SMA curve
-    [['cbTrail21',0,1], ['cbTrail55',1,2], ['cbTrail144',2,3], ['cbTrail377',3,4], ['cbTrail610',4,5]]
+    // [cbId, trailIndex, smaDatasetIndex]
+    [['cbTrail21',0,1], ['cbTrail55',1,2], ['cbTrail144',2,3], ['cbTrail377',3,4], ['cbTrail610',4,5],
+     ['cbTrail987',5,7], ['cbTrail1597',6,8], ['cbTrail2584',7,9]]
     .forEach(([id, ti, smaIdx]) => {
         document.getElementById(id).addEventListener('change', function() {
             trailActive[ti] = this.checked;
             if (!this.checked) {
                 trailCurrentMin[ti] = Infinity;
             } else {
-                // Ensure SMA has data (enable + compute if hidden)
-                const smaSizes = [21, 55, 144, 377, 610];
                 if (!chart.data.datasets[smaIdx].data.length) {
                     chart.data.datasets[smaIdx].hidden = false;
-                    chart.data.datasets[smaIdx].data = sma(chart.data.datasets[0].data, smaSizes[ti]);
+                    chart.data.datasets[smaIdx].data = sma(chart.data.datasets[0].data, SMA_SIZES[ti]);
                 }
-                // Anchor to current live tip
                 const d = chart.data.datasets[smaIdx].data;
                 trailCurrentMin[ti] = d.length ? d[d.length - 1].y : Infinity;
             }
@@ -5349,11 +5447,13 @@
         .catch(() => {}); // graceful fallback — log-based ARCH line still works
 
     // ── Settings persistence ───────────────────────────────────────────
-    const PREFS_KEY = 'albert-v3-dashboard-prefs-v2'; // bump version to clear old SMA defaults
+    const PREFS_KEY = 'albert-v3-dashboard-prefs-v3'; // bumped — added SMA 987/1597/2584
     const PREF_CBS  = [
-        'cbDots','cbSMA21','cbSMA55','cbSMA144','cbSMA377','cbSMA610','cbTMA',
+        'cbDots','cbSMA21','cbSMA55','cbSMA144','cbSMA377','cbSMA610',
+        'cbSMA987','cbSMA1597','cbSMA2584','cbTMA',
         'cbTrail21','cbTrail55','cbTrail144','cbTrail377','cbTrail610',
-        'cbFib','cbBB','cbOHLC','cbHA','cbMACD','cbRSI',
+        'cbTrail987','cbTrail1597','cbTrail2584',
+        'cbFib','cbBB','cbHA','cbMACD','cbRSI',
     ];
 
     // ── Drawing persistence + undo ─────────────────────────────────────
@@ -5443,7 +5543,13 @@
     // Restore event feed and Wald markers from previous session before first render.
     try {
         const _ae = localStorage.getItem('albert_events');
-        if (_ae) { anomalyEvents = JSON.parse(_ae); scheduleAnomalyRender(); }
+        if (_ae) {
+            const _raw = JSON.parse(_ae);
+            // Deduplicate: remove back-to-back entries with identical text (legacy doubled events).
+            anomalyEvents = _raw.filter((ev, i) => i === 0 || ev.text !== _raw[i - 1].text);
+            if (anomalyEvents.length !== _raw.length) persistEvents(); // write cleaned list back
+            scheduleAnomalyRender();
+        }
         const _we = localStorage.getItem('albert_wald_events');
         if (_we) {
             waldEvents = JSON.parse(_we);
@@ -5478,6 +5584,7 @@
         smaPreSeedLen  = smaLog.length; // freeze — never cleared below this point
         smaPreseedMaxX = smaPreSeedLen > 0 ? smaLog[smaPreSeedLen - 1].x : -Infinity;
         let _preseedTns = null;
+        let _lastGateEpsm = null;
         for (const line of epochText.split('\n')) {
             const m = line.match(/^EPOCH_SUMMARY epoch=(\d+) loss_avg=([\d.]+)/);
             if (!m) continue;
@@ -5486,6 +5593,17 @@
                 epochLog.push({ local_epoch: ge, global_epoch: ge, layers: null, avg_loss: al, clipped: false, skipped: false });
             const tm = line.match(/tns=(\d+)/);
             if (tm) _preseedTns = parseInt(tm[1]);
+            // Bootstrap gate state — accumulate loss ring and track last full summary
+            gLossRing.push(al);
+            if (gLossRing.length > gGateFibWin) gLossRing.shift();
+            const gm = line.match(/loss_best=([\d.]+) since_best=(\d+) wald_sev=([\d.]+) wald_fill=([\d.]+)%/);
+            if (gm) _lastGateEpsm = gm;
+        }
+        // Apply last known gate state so the overlay is populated immediately on load
+        if (_lastGateEpsm) {
+            gGateSinceBest = parseInt(_lastGateEpsm[2]);
+            gGateWaldSev   = parseFloat(_lastGateEpsm[3]);
+            gGateWaldFill  = parseFloat(_lastGateEpsm[4]);
         }
         const _tnsStored = localStorage.getItem('albert_tns');
         if (_preseedTns !== null)
@@ -5498,9 +5616,34 @@
         // Seed session trackers so RUN_START / restart never shows a value above the true historical min
         bestLoss     = allTimeBestBatch;
         bestEpochAvg = allTimeBestEpoch;
+        // Pin sessionStartLoss to the pre-seed ATL so the % shows improvement since page load,
+        // not a meaningless delta from the first randomly-polled live batch.
+        sessionStartLoss = allTimeBestBatch < Infinity ? allTimeBestBatch : null;
         if (allTimeBestBatch < Infinity)
             document.getElementById('v-best').textContent = allTimeBestBatch.toFixed(4);
+        // Pre-populate raw scatter (dataset[0]) with the last MAX_CHART_PTS points from the
+        // pre-seed so the chart has full historical coverage before the first live poll.
+        // The live poll will concat new points on top of this; no duplication because
+        // the gap-detection logic discards points already covered.
+        if (smaLog.length > 0) {
+            const seedSlice = smaLog.slice(-MAX_CHART_PTS);
+            chart.data.datasets[0].data = seedSlice.map(pt => ({ x: pt.x, y: pt.y, epoch: Math.floor(pt.x) }));
+            lastKnownEpoch = Math.floor(seedSlice[seedSlice.length - 1].x);
+            // Pre-compute all 5 SMA caches from the full preseed history.
+            // Use smaPreseedData (evenly downsampled) instead of smaVisibleSlice —
+            // the chart viewport at this point only covers the narrow scatter seedSlice
+            // range (last ~16 epochs); smaVisibleSlice would return [] for the full
+            // history and the lines would be invisible across the wider epoch-avg range.
+            [[1,21,0],[2,55,1],[3,144,2],[4,377,3],[5,610,4],
+             [7,987,5],[8,1597,6],[9,2584,7]].forEach(([dsIdx, w, ci]) => {
+                smaCacheFull[ci] = sma(smaLog, w);
+                if (!chart.data.datasets[dsIdx].hidden)
+                    chart.data.datasets[dsIdx].data = smaPreseedData(smaCacheFull[ci]);
+            });
+            chart.update('none');
+        }
     }).finally(() => {
+        updateGateChip(); // render gate state from preseed before first poll arrives
         poll(); // first render with real data
         // re-sync Chart.js dataset visibility — loadPrefs() fires before data exists,
         // so Chart.js initialises hidden-state from its own defaults on the first update();
@@ -6412,10 +6555,10 @@
     (function () {
         'use strict';
 
-        const NL = 17, NE = 12;
+        let NL = 17, NE = 12;
         const ENAMES = ['SYN','SEM','CTX','INF','MEM','GEN','LOG','LNG','ABS','PLN','CMP','INT'];
         // Fixed hue per layer — evenly distributed across spectrum for identity tracking
-        const LHUE = Array.from({length:NL}, (_,i) => i/NL);
+        let LHUE = Array.from({length:NL}, (_,i) => i/NL);
 
         const NP_LG = 3, NP_GE = 5, BEZ_SEGS = 7;  // particles + bezier arc segments
 
@@ -6465,11 +6608,11 @@
         }
 
         // Smoothed state
-        const _lg  = new Float32Array(NL).fill(0.05);  // current layer glow
-        const _lt  = new Float32Array(NL).fill(0.05);  // target
-        const _eg  = new Float32Array(NE).fill(0.05);  // current expert glow
-        const _et  = new Float32Array(NE).fill(0.05);  // target
-        const _rw  = new Float32Array(NE).fill(1/NE);  // routing weights
+        let _lg  = new Float32Array(NL).fill(0.05);  // current layer glow
+        let _lt  = new Float32Array(NL).fill(0.05);  // target
+        let _eg  = new Float32Array(NE).fill(0.05);  // current expert glow
+        let _et  = new Float32Array(NE).fill(0.05);  // target
+        let _rw  = new Float32Array(NE).fill(1/NE);  // routing weights
 
         // ── thermal colour (mirrors main dashboard) ──────────────────
         function _th(t) {
@@ -6524,6 +6667,29 @@
             const mat=new THREE.SpriteMaterial({map:_gTex(),color:col,
                 blending:THREE.AdditiveBlending,transparent:true,depthWrite:false});
             const sp=new THREE.Sprite(mat); sp.scale.setScalar(sz); return sp;
+        }
+
+        // ── teardown — called before reinit when layer count changes ─
+        function _teardown() {
+            _initialized = false;
+            if (_scene) {
+                // Remove all children and dispose geometries/materials
+                while (_scene.children.length > 0) {
+                    const obj = _scene.children[0];
+                    if (obj.geometry) obj.geometry.dispose();
+                    if (obj.material) {
+                        if (obj.material.map) obj.material.map.dispose();
+                        obj.material.dispose();
+                    }
+                    _scene.remove(obj);
+                }
+            }
+            _lSprites = []; _eSprites = []; _lLabels = []; _eLabels = [];
+            _lTrailSprites = []; _bezCtrl = [];
+            _bezEdgeGeo = null; _routerSprite = null; _routerLbl = null;
+            _exrColArr = null; _allLayersMode = false;
+            _allLayerExpertSprites = null; _allLayerGateConnMats = null;
+            _alBezEdgeGeo = null; _ptGeo = null; _ptPhase = null; _ptSpeed = null;
         }
 
         // ── build scene ──────────────────────────────────────────────
@@ -7183,6 +7349,15 @@
         // ── public API ───────────────────────────────────────────────
         window.mycBrainUpdate = function({ tele, grad, route }={}) {
             if (tele) {
+                // Reinitialize when surgery adds a layer
+                if (tele.numLayers && tele.numLayers !== NL) {
+                    NL = tele.numLayers;
+                    LHUE = Array.from({length:NL}, (_,i) => i/NL);
+                    _lg = new Float32Array(NL).fill(0.05);
+                    _lt = new Float32Array(NL).fill(0.05);
+                    _teardown();
+                    if (window.THREE) _init();
+                }
                 const mxA=Math.max(...tele.expertActivity,1e-8);
                 for (let e=0;e<Math.min(NE,tele.expertActivity.length);e++)
                     _et[e]=tele.expertActivity[e]/mxA;
@@ -7408,15 +7583,15 @@
     (function () {
         'use strict';
 
-        const NL = 17, NE = 12;
+        let NL = 17, NE = 12;
         const BG = '#060d15';
-        const LHUE = Array.from({length:NL}, (_,i) => i/NL);
+        let LHUE = Array.from({length:NL}, (_,i) => i/NL);
         const ENAMES = ['SYN','SEM','CTX','INF','MEM','GEN','LOG','LNG','ABS','PLN','CMP','INT'];
 
         let _canvas = null, _ctx = null, _raf = null, _active = false, _t = 0;
         let _tooltip = null, _hoverLayer = -1;
-        const _layerStates = Array.from({length:NL}, () => Array(NE).fill('O'));
-        const _lt = new Float32Array(NL).fill(0.05);
+        let _layerStates = Array.from({length:NL}, () => Array(NE).fill('O'));
+        let _lt = new Float32Array(NL).fill(0.05);
 
         function _hsl(h, s, l) { return `hsl(${(h*360).toFixed(0)},${(s*100).toFixed(0)}%,${(l*100).toFixed(0)}%)`; }
 
@@ -7425,7 +7600,14 @@
             return s[Math.floor(NL/2)];
         }
 
-        window.mycFlowUpdate = function({ tlight, grad } = {}) {
+        window.mycFlowUpdate = function({ tlight, grad, numLayers } = {}) {
+            // Rebuild layer arrays when surgery adds a layer
+            if (numLayers && numLayers !== NL) {
+                NL = numLayers;
+                LHUE = Array.from({length:NL}, (_,i) => i/NL);
+                _layerStates = Array.from({length:NL}, () => Array(NE).fill('O'));
+                _lt = new Float32Array(NL).fill(0.05);
+            }
             if (tlight) {
                 for (const l of tlight) {
                     if (l.layer < NL) _layerStates[l.layer] = Array.from(l.states);
