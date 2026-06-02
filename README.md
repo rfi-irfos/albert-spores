@@ -124,3 +124,7 @@ git -C ~/projects/albert-spores pull && bash ~/projects/albert-spores/install.sh
 ```
 
 Safe to re-run at any time.
+
+## Contributors
+
+Built by the RFI-IRFOS core team — see [CONTRIBUTORS.md](CONTRIBUTORS.md).
