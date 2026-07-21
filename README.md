@@ -1,5 +1,6 @@
 # albert-spores
 
+
 **albert.** is a self-growing language model trained collectively — across dedicated GPUs, laptops, and everything in between. This repo is where contributors worldwide submit checkpoint fragments called *spores*. Every accepted spore gets blended into the live model at the next training cycle.
 
 No GPU required. No ML background required. If your machine can run Python, it can help albert. grow.
